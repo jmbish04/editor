@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { apiGraphSchema } from '@/lib/graph-schema'
+import { sceneRenderingMetadataSchema } from '@/lib/rendering-metadata-schema'
 import {
   guardSceneApiRequest,
   sceneApiJson,
@@ -18,6 +19,7 @@ const putSceneSchema = z.object({
   graph: apiGraphSchema,
   thumbnailUrl: z.string().url().nullable().optional(),
   expectedVersion: z.number().int().nonnegative().optional(),
+  rendering: sceneRenderingMetadataSchema.nullable().optional(),
 })
 
 const patchSceneSchema = z.object({
@@ -92,6 +94,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       thumbnailUrl:
         parsed.data.thumbnailUrl === undefined ? existing.thumbnailUrl : parsed.data.thumbnailUrl,
       expectedVersion: expectedVersion ?? existing.version,
+      rendering: parsed.data.rendering === undefined ? existing.rendering : parsed.data.rendering,
     })
     return sceneApiJson(request, meta, {
       headers: { ETag: `"${meta.version}"` },

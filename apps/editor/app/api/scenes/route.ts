@@ -1,6 +1,7 @@
 import type { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { apiGraphSchema } from '@/lib/graph-schema'
+import { sceneRenderingMetadataSchema } from '@/lib/rendering-metadata-schema'
 import { guardSceneApiRequest, sceneApiJson, sceneApiPreflight } from '@/lib/scene-api-security'
 import { getSceneOperations } from '@/lib/scene-store-server'
 
@@ -12,6 +13,7 @@ const createSceneSchema = z.object({
   projectId: z.string().min(1).max(200).nullable().optional(),
   graph: apiGraphSchema,
   thumbnailUrl: z.string().url().nullable().optional(),
+  rendering: sceneRenderingMetadataSchema.nullable().optional(),
 })
 
 const listQuerySchema = z.object({
@@ -80,6 +82,7 @@ export async function POST(request: NextRequest) {
       projectId: parsed.data.projectId ?? null,
       graph: parsed.data.graph as never,
       thumbnailUrl: parsed.data.thumbnailUrl ?? null,
+      rendering: parsed.data.rendering ?? null,
     })
     return sceneApiJson(request, meta, {
       status: 201,

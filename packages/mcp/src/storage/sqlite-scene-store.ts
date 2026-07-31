@@ -17,6 +17,7 @@ import {
   type SceneMeta,
   type SceneMutateOptions,
   SceneNotFoundError,
+  type SceneRenderingMetadata,
   type SceneSaveOptions,
   type SceneStore,
   SceneTooLargeError,
@@ -50,6 +51,7 @@ interface SceneRow {
   size_bytes: number
   node_count: number
   graph_json: string
+  rendering_metadata_json: string | null
 }
 
 interface SceneEventRow {
@@ -144,6 +146,21 @@ function rowToMeta(row: SceneRow): SceneMeta {
     url: editorUrl,
     published: true,
     graphHash: hashGraphJson(row.graph_json),
+    rendering: parseRenderingMetadata(row.rendering_metadata_json, row.id),
+  }
+}
+
+function parseRenderingMetadata(
+  raw: string | null,
+  context: string,
+): SceneRenderingMetadata | null {
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as SceneRenderingMetadata
+  } catch (error) {
+    throw new SceneInvalidError(
+      `Failed to parse rendering metadata for ${context}: ${error instanceof Error ? error.message : String(error)}`,
+    )
   }
 }
 
@@ -367,6 +384,11 @@ export class SqliteSceneStore implements SceneStore {
       const ownerId = opts.ownerId ?? existing?.owner_id ?? placeholder?.ownerId ?? null
       const thumbnailUrl =
         opts.thumbnailUrl ?? existing?.thumbnail_url ?? placeholder?.thumbnailUrl ?? null
+      const rendering =
+        opts.rendering === undefined
+          ? parseRenderingMetadata(existing?.rendering_metadata_json ?? null, id)
+          : opts.rendering
+      const renderingMetadataJson = rendering ? JSON.stringify(rendering) : null
 
       if (existing) {
         db.query(
@@ -379,7 +401,8 @@ export class SqliteSceneStore implements SceneStore {
                  updated_at = ?,
                  size_bytes = ?,
                  node_count = ?,
-                 graph_json = ?
+                 graph_json = ?,
+                 rendering_metadata_json = ?
            WHERE id = ?`,
         ).run(
           opts.name,
@@ -391,14 +414,16 @@ export class SqliteSceneStore implements SceneStore {
           sizeBytes,
           nodeCount,
           graphJson,
+          renderingMetadataJson,
           id,
         )
       } else {
         db.query(
           `INSERT INTO scenes (
              id, name, project_id, owner_id, thumbnail_url, version,
-             created_at, updated_at, size_bytes, node_count, graph_json
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             created_at, updated_at, size_bytes, node_count, graph_json,
+             rendering_metadata_json
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         ).run(
           id,
           opts.name,
@@ -411,6 +436,7 @@ export class SqliteSceneStore implements SceneStore {
           sizeBytes,
           nodeCount,
           graphJson,
+          renderingMetadataJson,
         )
       }
 
@@ -437,6 +463,7 @@ export class SqliteSceneStore implements SceneStore {
         url: editorUrlForScene(id),
         published: true,
         graphHash: hashGraphJson(graphJson),
+        rendering,
       }
     })
   }
@@ -473,7 +500,8 @@ export class SqliteSceneStore implements SceneStore {
     const rows = db
       .query(
         `SELECT id, name, project_id, owner_id, thumbnail_url, version,
-                created_at, updated_at, size_bytes, node_count, graph_json
+                created_at, updated_at, size_bytes, node_count, graph_json,
+                rendering_metadata_json
            FROM scenes
            ${where}
           ORDER BY updated_at DESC, id ASC
@@ -621,7 +649,8 @@ export class SqliteSceneStore implements SceneStore {
         updated_at TEXT NOT NULL,
         size_bytes INTEGER NOT NULL CHECK (size_bytes >= 0),
         node_count INTEGER NOT NULL CHECK (node_count >= 0),
-        graph_json TEXT NOT NULL
+        graph_json TEXT NOT NULL,
+        rendering_metadata_json TEXT
       );
 
       CREATE INDEX IF NOT EXISTS scenes_project_updated_idx
@@ -654,6 +683,11 @@ export class SqliteSceneStore implements SceneStore {
       CREATE INDEX IF NOT EXISTS scene_events_scene_event_idx
         ON scene_events(scene_id, event_id);
     `)
+
+    const sceneColumns = db.query('PRAGMA table_info(scenes)').all() as Array<{ name: string }>
+    if (!sceneColumns.some((column) => column.name === 'rendering_metadata_json')) {
+      db.exec('ALTER TABLE scenes ADD COLUMN rendering_metadata_json TEXT')
+    }
   }
 
   private async withWriteTransaction<T>(fn: (db: SqliteDatabase) => T | Promise<T>): Promise<T> {
@@ -678,7 +712,8 @@ export class SqliteSceneStore implements SceneStore {
       db
         .query(
           `SELECT id, name, project_id, owner_id, thumbnail_url, version,
-                  created_at, updated_at, size_bytes, node_count, graph_json
+                  created_at, updated_at, size_bytes, node_count, graph_json,
+                  rendering_metadata_json
              FROM scenes
             WHERE id = ?`,
         )

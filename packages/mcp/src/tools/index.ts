@@ -1,6 +1,10 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { SceneOperations } from '../operations'
 import { registerApplyPatch } from './apply-patch'
+import {
+  type CloudflareScreenshotToolOptions,
+  registerCaptureSceneScreenshot,
+} from './capture-scene-screenshot'
 import { registerCheckCollisions } from './check-collisions'
 import { registerConstructionTools } from './construction-tools'
 import { registerCreateLevel } from './create-level'
@@ -35,7 +39,11 @@ import { registerVariantTools } from './variants'
  * Scene-lifecycle tools (save/load/list/delete/rename scene) are registered
  * when persistence operations are available.
  */
-export function registerTools(server: McpServer, operations: SceneOperations): void {
+export function registerTools(
+  server: McpServer,
+  operations: SceneOperations,
+  options: { cloudflare?: CloudflareScreenshotToolOptions } = {},
+): void {
   registerGetScene(server, operations)
   registerGetNode(server, operations)
   registerDescribeNode(server, operations)
@@ -58,6 +66,7 @@ export function registerTools(server: McpServer, operations: SceneOperations): v
   registerExportGlb(server, operations)
   registerValidateScene(server, operations)
   registerCheckCollisions(server, operations)
+  registerCaptureSceneScreenshot(server, operations, options.cloudflare)
   registerTemplateTools(server, operations)
   if (operations.hasStore) {
     registerSceneLifecycleTools(server, operations)

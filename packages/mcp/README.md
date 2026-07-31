@@ -89,6 +89,30 @@ another MCP process saved a newer version first, the MCP tool returns
 `live_sync_version_conflict`; reload the scene with `load_scene` before
 continuing.
 
+## Cloudflare screenshot capture
+
+`capture_scene_screenshot` uses Cloudflare Browser Rendering to capture a public editor URL and
+uploads the PNG directly to Cloudflare Images. Pass either an explicit `url`, or a `sceneId` with
+`PASCAL_EDITOR_BASE_URL` configured. For stored scenes, the tool saves the returned public Images
+delivery URL as the scene thumbnail by default.
+
+Required server-side environment variables:
+
+```text
+CLOUDFLARE_ACCOUNT_ID
+CLOUDFLARE_WRANGLER_API_TOKEN
+PASCAL_EDITOR_BASE_URL=https://your-editor.vercel.app
+CORE_REMODEL_API_URL=https://core-remodel.hacolby.workers.dev
+CORE_REMODEL_API_TOKEN
+PASCAL_SCENE_API_TOKEN
+```
+
+The token needs `Browser Rendering - Edit` and Cloudflare Images write permission. A Cloudflare
+Images delivery hash is not required because the upload response contains complete variant URLs.
+From this repository, `bun run mcp:tokens` loads the Cloudflare credentials from `~/bin/tokens`,
+loads `WORKER_API_KEY` as both Core Remodel and Pascal scene API tokens, and supplies the Core
+Remodel URL to the MCP child process without writing secrets to disk.
+
 ## Claude Desktop config
 
 Edit `~/Library/Application Support/Claude/claude_desktop_config.json`

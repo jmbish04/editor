@@ -58,7 +58,15 @@ export default async function ScenesPage() {
             <span className="text-muted-foreground">/</span>
             <span className="font-medium text-foreground">Scenes</span>
           </nav>
-          <CreateSceneButton />
+          <div className="flex items-center gap-3">
+            <Link
+              className="text-muted-foreground text-sm hover:text-foreground hover:underline"
+              href="/mcp-setup"
+            >
+              MCP setup
+            </Link>
+            <CreateSceneButton />
+          </div>
         </div>
       </header>
 

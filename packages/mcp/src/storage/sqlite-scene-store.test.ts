@@ -129,6 +129,41 @@ describe('SqliteSceneStore', () => {
     expect(loaded?.thumbnailUrl).toBe('https://example.com/t.png')
   })
 
+  test('round-trips Core Remodel rendering lineage without owning the source project', async () => {
+    const rendering = {
+      coreRemodelProjectId: 'core-project-42',
+      variant: { id: 'variant-a', label: 'Variant A', parentSceneId: null },
+      measurements: [
+        {
+          measurementId: 'measurement-7',
+          kind: 'wall-length',
+          value: 4.25,
+          unit: 'm',
+          confidence: 0.97,
+          sourceRevision: 'revision-3',
+        },
+      ],
+      confidence: 0.94,
+      provenance: {
+        source: 'core-remodel' as const,
+        generatedAt: '2026-07-31T12:00:00.000Z',
+        sourceRevision: 'revision-3',
+        requestId: 'request-10',
+      },
+    }
+    await store.save({
+      id: 'variant-a',
+      name: 'Variant A',
+      graph: makeGraph(),
+      projectId: 'core-project-42',
+      rendering,
+    })
+
+    store.close()
+    store = createStore(rootDir)
+    expect((await store.load('variant-a'))?.rendering).toEqual(rendering)
+  })
+
   test('generates ids for new scenes and rejects explicit slug collisions', async () => {
     const a = await store.save({ name: 'A', graph: makeGraph() })
     const b = await store.save({ name: 'B', graph: makeGraph() })
