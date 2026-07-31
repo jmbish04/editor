@@ -12,6 +12,7 @@ describe('capture_scene_screenshot', () => {
   let client: Client
   let store: InMemorySceneStore
   let requests: Array<{ url: string; init?: RequestInit }>
+  let imageVariants: string[]
 
   beforeEach(async () => {
     const bridge = new SceneBridge()
@@ -25,6 +26,10 @@ describe('capture_scene_screenshot', () => {
       graph: operations.exportSceneGraph(),
     })
     requests = []
+    imageVariants = [
+      'https://imagedelivery.net/account/image-1/thumbnail',
+      'https://imagedelivery.net/account/image-1/original',
+    ]
 
     const server = new McpServer({ name: 'test', version: '0.0.0' })
     registerCaptureSceneScreenshot(server, operations, {
@@ -44,10 +49,7 @@ describe('capture_scene_screenshot', () => {
             filename: 'kitchen.png',
             uploaded: '2026-07-31T12:00:01.000Z',
             requireSignedURLs: false,
-            variants: [
-              'https://imagedelivery.net/account/image-1/thumbnail',
-              'https://imagedelivery.net/account/image-1/original',
-            ],
+            variants: imageVariants,
           },
         })
       },
@@ -95,5 +97,30 @@ describe('capture_scene_screenshot', () => {
     })
     expect(result.isError).toBe(true)
     expect(requests).toHaveLength(0)
+  })
+
+  test('preserves project identity errors before making Cloudflare requests', async () => {
+    const result = await client.callTool({
+      name: 'capture_scene_screenshot',
+      arguments: { sceneId: 'kitchen', projectId: 'another-project' },
+    })
+    expect(result.isError).toBe(true)
+    expect(requests).toHaveLength(0)
+  })
+
+  test('drops malformed Cloudflare Images variant URLs', async () => {
+    imageVariants = [
+      'not-a-url',
+      'https://imagedelivery.net/account/image-1/original',
+      'javascript:alert(1)',
+    ]
+    const result = await client.callTool({
+      name: 'capture_scene_screenshot',
+      arguments: { sceneId: 'kitchen' },
+    })
+    expect(result.isError).toBeFalsy()
+    const payload = result.structuredContent as Record<string, unknown>
+    expect(payload.variants).toEqual(['https://imagedelivery.net/account/image-1/original'])
+    expect(payload.deliveryUrl).toBe('https://imagedelivery.net/account/image-1/original')
   })
 })

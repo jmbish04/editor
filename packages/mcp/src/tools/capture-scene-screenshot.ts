@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import type { SceneOperations } from '../operations'
-import { ErrorCode, throwMcpError } from './errors'
+import { ErrorCode, McpError, throwMcpError } from './errors'
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024
 const MAX_METADATA_BYTES = 1024
@@ -145,6 +145,17 @@ async function responseError(response: Response): Promise<string> {
   }
 }
 
+function validHttpUrls(values: string[]): string[] {
+  return values.flatMap((value) => {
+    try {
+      const parsed = new URL(value)
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? [parsed.toString()] : []
+    } catch {
+      return []
+    }
+  })
+}
+
 function preferredVariant(variants: string[]): string | null {
   return (
     variants.find((variant) => /\/(?:public|original)$/.test(new URL(variant).pathname)) ??
@@ -203,13 +214,21 @@ export function registerCaptureSceneScreenshot(
 
       try {
         if (setAsThumbnail && sceneId) {
-          if (!operations.hasStore) throw new Error('scene_store_unavailable')
+          if (!operations.hasStore) {
+            throwMcpError(ErrorCode.InvalidRequest, 'scene_store_unavailable')
+          }
           storedScene = await operations.loadStoredScene(sceneId)
-          if (!storedScene) throw new Error(`scene_not_found: ${sceneId}`)
+          if (!storedScene) {
+            throwMcpError(ErrorCode.InvalidParams, 'scene_not_found', { sceneId })
+          }
           const mappedProjectId =
             storedScene.rendering?.coreRemodelProjectId ?? storedScene.projectId
           if (projectId && mappedProjectId !== projectId) {
-            throw new Error('project_identity_mismatch')
+            throwMcpError(ErrorCode.InvalidRequest, 'project_identity_mismatch', {
+              projectId,
+              mappedProjectId,
+              sceneId,
+            })
           }
         }
 
@@ -259,7 +278,7 @@ export function registerCaptureSceneScreenshot(
           ...(metadata ?? {}),
         }
         const serializedMetadata = JSON.stringify(imageMetadata)
-        if (Buffer.byteLength(serializedMetadata, 'utf8') > MAX_METADATA_BYTES) {
+        if (new TextEncoder().encode(serializedMetadata).byteLength > MAX_METADATA_BYTES) {
           throw new Error(`Cloudflare Images metadata exceeds ${MAX_METADATA_BYTES} bytes`)
         }
 
@@ -288,7 +307,7 @@ export function registerCaptureSceneScreenshot(
               .join('; ') || 'Cloudflare Images returned an invalid upload response',
           )
         }
-        const variants = uploaded.result.variants ?? []
+        const variants = validHttpUrls(uploaded.result.variants ?? [])
         const deliveryUrl = preferredVariant(variants)
         let sceneVersion: number | null = null
 
@@ -327,6 +346,7 @@ export function registerCaptureSceneScreenshot(
           structuredContent: payload,
         }
       } catch (error) {
+        if (error instanceof McpError) throw error
         throwMcpError(ErrorCode.InternalError, 'cloudflare_screenshot_failed', {
           reason: error instanceof Error ? error.message : String(error),
         })
