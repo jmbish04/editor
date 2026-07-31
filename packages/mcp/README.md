@@ -89,12 +89,33 @@ another MCP process saved a newer version first, the MCP tool returns
 `live_sync_version_conflict`; reload the scene with `load_scene` before
 continuing.
 
+## Measured geometry and granular coordinates
+
+Core Remodel may only know exact room width/depth plus a percent box for relative placement. Use
+`seed_measured_rooms` to build the deterministic base: exact measured rectangles positioned from
+those boxes, with provisional walls clearly marked in node metadata. Do not treat the generated
+walls or adjacency as field-verified.
+
+Use `get_project_geometry` when an AI model needs the complete project scene. It returns coordinate
+conventions, exact wall endpoints, opening coordinates, zone polygons, surfaces, item transforms,
+dimensions, raw nodes (with `detail: "full"`), rendering evidence, and measured-bounds validation.
+Use `nodeTypes` to narrow a large graph without weakening the underlying contract.
+
+After an AI variant edits the graph, call `validate_measured_geometry`. It compares every seeded
+room's current zone, slab, ceiling, and provisional wall loop with the authoritative measured
+width/depth and reports exact deltas. Geometry without measured evidence is explicitly reported as
+not applicable rather than valid. Wall/zone/surface coordinates are level-local; level records
+include their building transform for clients that need to compose world coordinates.
+The lower-level `get_scene`, `get_node`, `get_walls`, `get_zones`, `find_nodes`, `measure`, and
+`query_spatial` tools remain available for follow-up inspection.
+
 ## Cloudflare screenshot capture
 
 `capture_scene_screenshot` uses Cloudflare Browser Rendering to capture a public editor URL and
 uploads the PNG directly to Cloudflare Images. Pass either an explicit `url`, or a `sceneId` with
 `PASCAL_EDITOR_BASE_URL` configured. For stored scenes, the tool saves the returned public Images
-delivery URL as the scene thumbnail by default.
+delivery URL as the scene thumbnail by default. Explicit URLs are restricted to the editor base
+origin plus any origins named in `PASCAL_CAPTURE_ALLOWED_ORIGINS` (comma-separated).
 
 Required server-side environment variables:
 
@@ -102,6 +123,8 @@ Required server-side environment variables:
 CLOUDFLARE_ACCOUNT_ID
 CLOUDFLARE_WRANGLER_API_TOKEN
 PASCAL_EDITOR_BASE_URL=https://your-editor.vercel.app
+# Optional: additional public preview origins accepted for explicit capture URLs
+PASCAL_CAPTURE_ALLOWED_ORIGINS=https://preview.example.vercel.app
 CORE_REMODEL_API_URL=https://core-remodel.hacolby.workers.dev
 CORE_REMODEL_API_TOKEN
 PASCAL_SCENE_API_TOKEN

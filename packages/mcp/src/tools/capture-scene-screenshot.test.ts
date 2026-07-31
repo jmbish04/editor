@@ -87,4 +87,13 @@ describe('capture_scene_screenshot', () => {
     expect(result.isError).toBe(true)
     expect(requests).toHaveLength(0)
   })
+
+  test('rejects explicit URLs outside the configured editor origins', async () => {
+    const result = await client.callTool({
+      name: 'capture_scene_screenshot',
+      arguments: { url: 'http://169.254.169.254/latest/meta-data', setAsThumbnail: false },
+    })
+    expect(result.isError).toBe(true)
+    expect(requests).toHaveLength(0)
+  })
 })

@@ -1,6 +1,5 @@
 import type { SceneStore } from './types'
 
-export * from './core-remodel-scene-store'
 export * from './slug'
 export * from './sqlite-scene-store'
 export * from './types'

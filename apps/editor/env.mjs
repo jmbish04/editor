@@ -20,6 +20,7 @@ export const env = createEnv({
     CLOUDFLARE_ACCOUNT_ID: z.string().min(1).optional(),
     CLOUDFLARE_WRANGLER_API_TOKEN: z.string().min(1).optional(),
     PASCAL_EDITOR_BASE_URL: z.string().url().optional(),
+    PASCAL_CAPTURE_ALLOWED_ORIGINS: z.string().optional(),
   },
 
   /**
@@ -39,6 +40,7 @@ export const env = createEnv({
     CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
     CLOUDFLARE_WRANGLER_API_TOKEN: process.env.CLOUDFLARE_WRANGLER_API_TOKEN,
     PASCAL_EDITOR_BASE_URL: process.env.PASCAL_EDITOR_BASE_URL,
+    PASCAL_CAPTURE_ALLOWED_ORIGINS: process.env.PASCAL_CAPTURE_ALLOWED_ORIGINS,
     NEXT_PUBLIC_ASSETS_CDN_URL:
       process.env.NEXT_PUBLIC_ASSETS_CDN_URL ?? process.env.NEXT_PUBLIC_EDITOR_ASSETS_CDN_URL,
   },

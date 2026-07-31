@@ -6,6 +6,8 @@ import {
   adapterHelper,
   codingAgentBrief,
   environmentConfig,
+  geometryAdapterMapping,
+  geometryContract,
   installCommand,
   screenshotContract,
   workerScaffold,
@@ -119,6 +121,12 @@ export default function McpSetupPage() {
               <strong>Worker rule:</strong> build a stateless façade. Do not import Pascal&apos;s
               Bun CLI, Node HTTP transport, or SQLite store into the Cloudflare Worker.
             </p>
+            <div className="mt-6">
+              <CodeBlock code={geometryContract} label="Geometry and coordinate contract" />
+            </div>
+            <div className="mt-5">
+              <CodeBlock code={geometryAdapterMapping} label="Project-scoped adapter mapping" />
+            </div>
           </section>
 
           <section className="scroll-mt-24 pt-16" id="worker">
@@ -129,7 +137,7 @@ export default function McpSetupPage() {
             </p>
             <div className="mt-6 space-y-5">
               <CodeBlock code={installCommand} label="Install dependencies" language="bash" />
-              <CodeBlock code={environmentConfig} label="Worker environment" language="dotenv" />
+              <CodeBlock code={environmentConfig} label="Worker bindings" language="json" />
               <CodeBlock
                 code={workerScaffold}
                 label="backend/src/modules/pascal/mcp.ts"

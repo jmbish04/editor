@@ -30,4 +30,16 @@ export const sceneRenderingMetadataSchema = z.object({
     sourceRevision: nullableText,
     requestId: nullableText,
   }),
+  geometry: z
+    .object({
+      basis: z.enum(['measured-rectangle-bbox-placement', 'pascal-refined', 'imported']),
+      sourceDetail: z.enum([
+        'room-percent-boxes-and-measured-sizes',
+        'field-verified-coordinates',
+        'unknown',
+      ]),
+      provisionalElements: z.array(z.string().min(1).max(200)).max(1_000),
+      validatedAt: z.iso.datetime().nullable(),
+    })
+    .optional(),
 })

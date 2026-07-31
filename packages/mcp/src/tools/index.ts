@@ -19,8 +19,10 @@ import { registerFindNodes } from './find-nodes'
 import { registerGetNode } from './get-node'
 import { registerGetScene } from './get-scene'
 import { registerMeasure } from './measure'
+import { registerSeedMeasuredRooms } from './measured-rooms'
 import { registerPhotoToSceneTool } from './photo-to-scene'
 import { registerPlaceItem } from './place-item'
+import { registerProjectGeometryTools } from './project-geometry'
 import { registerRedo } from './redo'
 import { registerRoomTools } from './room-tools'
 import { registerSceneLifecycleTools } from './scene-lifecycle'
@@ -50,8 +52,10 @@ export function registerTools(
   registerFindNodes(server, operations)
   registerSceneQueryTools(server, operations)
   registerMeasure(server, operations)
+  registerProjectGeometryTools(server, operations)
   registerConstructionTools(server, operations)
   registerRoomTools(server, operations)
+  registerSeedMeasuredRooms(server, operations)
   registerApplyPatch(server, operations)
   registerCreateLevel(server, operations)
   registerCreateWall(server, operations)

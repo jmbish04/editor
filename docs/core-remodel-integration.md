@@ -18,6 +18,33 @@ Every integrated Pascal scene carries both `projectId` and
 These snapshots explain how a scene was generated. Updating them does not update the corresponding
 Core Remodel business records.
 
+## Geometry honesty and model access
+
+Core Remodel room records currently contain measured room sizes and per-room percent boxes, not
+field-verified wall coordinates. The deterministic base therefore uses
+`measured-rectangle-bbox-placement`: each room is an axis-aligned rectangle at its exact measured
+width and depth, while the percent box controls relative placement. Initial walls, adjacency, and
+openings remain provisional until they are refined in Pascal.
+
+The MCP surface makes that distinction explicit:
+
+- `seed_measured_rooms` converts percent boxes and measured dimensions into a deterministic Pascal
+  graph. It records the source room, normalized box, measurement IDs, confidence, and provisional
+  status on every generated zone, slab, ceiling, and wall.
+- `get_project_geometry` returns the full stored graph when requested, plus model-friendly levels,
+  walls, exact `[x,z]` endpoints, wall-local opening coordinates, zone polygons, surfaces, item
+  transforms, dimensions, rendering provenance, and measured-bounds validation.
+- `validate_measured_geometry` checks AI-edited zones, slabs, ceilings, and provisional wall loops
+  against authoritative measured width and depth. With no measured evidence it returns
+  `status: "not_applicable"` and `valid: null`.
+- Existing granular tools remain available after `load_scene`: `get_scene`, `get_node`, `get_walls`,
+  `get_zones`, `get_level_summary`, `find_nodes`, `measure`, and `query_spatial`.
+
+Coordinates use meters, with X/Z on the floor plane and Y vertical. Wall endpoints, zone polygons,
+and slab/ceiling polygons are level-local `[x,z]` and retain their `levelId`; building transforms
+are returned separately so clients can compose world coordinates. Door/window positions are
+host-local `[x,y,z]` and identify their wall or roof-face host.
+
 ## Vercel storage selection
 
 The editor selects the remote adapter when `CORE_REMODEL_API_URL` is set. Set
@@ -57,6 +84,9 @@ External orchestrators can use the protected editor APIs:
 - `POST /api/projects/:projectId/sync` with `direction: "push"` writes a complete graph and its
   rendering metadata; `direction: "pull"` loads one scene after verifying project identity.
 
+The pull response contains the complete node dictionary, so a Core Remodel MCP adapter must expose
+it through `get_project_geometry` rather than reducing it to room names or approximate dimensions.
+
 The existing `PASCAL_SCENE_API_TOKEN`, origin checks, CORS policy, rate limiting, and optimistic
 version behavior apply to these routes.
 
@@ -66,6 +96,9 @@ The MCP tool `capture_scene_screenshot` renders either an explicit URL or
 `PASCAL_EDITOR_BASE_URL/scene/:sceneId` through Cloudflare Browser Rendering, uploads the resulting
 PNG to Cloudflare Images, and returns the image ID, delivery URL, and every configured variant URL.
 When a scene ID is supplied, the public delivery URL is saved as that scene's thumbnail by default.
+Explicit URLs must match the `PASCAL_EDITOR_BASE_URL` origin or an origin explicitly configured in
+`PASCAL_CAPTURE_ALLOWED_ORIGINS`, preventing the render service from becoming an arbitrary URL
+fetcher.
 
 The tool requires `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_WRANGLER_API_TOKEN`. The API token needs
 `Browser Rendering - Edit` and Cloudflare Images write permission. The Images delivery hash is not

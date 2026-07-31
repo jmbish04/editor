@@ -32,6 +32,17 @@ export interface SceneProvenance {
   requestId: string | null
 }
 
+export interface SceneGeometryEvidence {
+  /** How the initial or current geometry was produced. */
+  basis: 'measured-rectangle-bbox-placement' | 'pascal-refined' | 'imported'
+  /** The most granular coordinate evidence available from the source system. */
+  sourceDetail: 'room-percent-boxes-and-measured-sizes' | 'field-verified-coordinates' | 'unknown'
+  /** Elements that remain hypotheses rather than field-verified geometry. */
+  provisionalElements: string[]
+  /** Last measured-bounds validation timestamp, when available. */
+  validatedAt: string | null
+}
+
 /**
  * Rendering-only integration metadata. Core Remodel remains authoritative for
  * the project and measurement records referenced here.
@@ -42,6 +53,8 @@ export interface SceneRenderingMetadata {
   measurements: SceneMeasurementEvidence[]
   confidence: number | null
   provenance: SceneProvenance
+  /** Geometry truthfulness and refinement state. Optional for older scenes. */
+  geometry?: SceneGeometryEvidence
 }
 
 export interface SceneMeta {

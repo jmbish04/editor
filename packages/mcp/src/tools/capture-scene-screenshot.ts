@@ -11,6 +11,7 @@ export interface CloudflareScreenshotToolOptions {
   accountId?: string
   apiToken?: string
   editorBaseUrl?: string
+  allowedCaptureOrigins?: string[]
   fetch?: typeof fetch
   now?: () => Date
 }
@@ -38,7 +39,9 @@ export const captureSceneScreenshotInput = {
     .string()
     .url()
     .optional()
-    .describe('Explicit public editor/page URL. Required when sceneId cannot be resolved.'),
+    .describe(
+      'Explicit public editor/page URL on a configured capture origin. Required when sceneId cannot be resolved.',
+    ),
   projectId: z.string().min(1).max(200).optional(),
   width: z.number().int().min(320).max(3840).default(1440),
   height: z.number().int().min(240).max(2160).default(900),
@@ -76,18 +79,44 @@ function envOptions(): CloudflareScreenshotToolOptions {
     accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
     apiToken: process.env.CLOUDFLARE_WRANGLER_API_TOKEN,
     editorBaseUrl: process.env.PASCAL_EDITOR_BASE_URL ?? process.env.NEXT_PUBLIC_APP_URL,
+    allowedCaptureOrigins: process.env.PASCAL_CAPTURE_ALLOWED_ORIGINS?.split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
   }
+}
+
+function allowedOrigins(
+  editorBaseUrl: string | undefined,
+  configuredOrigins: string[] | undefined,
+): Set<string> {
+  const origins = new Set<string>()
+  for (const candidate of [editorBaseUrl, ...(configuredOrigins ?? [])]) {
+    if (!candidate) continue
+    const parsed = new URL(candidate)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('capture origins must use http or https')
+    }
+    origins.add(parsed.origin)
+  }
+  return origins
 }
 
 function resolveCaptureUrl(
   url: string | undefined,
   sceneId: string | undefined,
   editorBaseUrl: string | undefined,
+  configuredOrigins: string[] | undefined,
 ): string {
+  const origins = allowedOrigins(editorBaseUrl, configuredOrigins)
   if (url) {
     const parsed = new URL(url)
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       throw new Error('url must use http or https')
+    }
+    if (!origins.has(parsed.origin)) {
+      throw new Error(
+        'url origin is not allowed; configure PASCAL_EDITOR_BASE_URL or PASCAL_CAPTURE_ALLOWED_ORIGINS',
+      )
     }
     return parsed.toString()
   }
@@ -177,12 +206,19 @@ export function registerCaptureSceneScreenshot(
           if (!operations.hasStore) throw new Error('scene_store_unavailable')
           storedScene = await operations.loadStoredScene(sceneId)
           if (!storedScene) throw new Error(`scene_not_found: ${sceneId}`)
-          if (projectId && storedScene.projectId !== projectId) {
+          const mappedProjectId =
+            storedScene.rendering?.coreRemodelProjectId ?? storedScene.projectId
+          if (projectId && mappedProjectId !== projectId) {
             throw new Error('project_identity_mismatch')
           }
         }
 
-        const capturedUrl = resolveCaptureUrl(url, sceneId, options.editorBaseUrl)
+        const capturedUrl = resolveCaptureUrl(
+          url,
+          sceneId,
+          options.editorBaseUrl,
+          options.allowedCaptureOrigins,
+        )
         const authHeaders = {
           Authorization: `Bearer ${options.apiToken}`,
           'Content-Type': 'application/json',
