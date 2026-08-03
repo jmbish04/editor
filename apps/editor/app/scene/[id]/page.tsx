@@ -26,6 +26,9 @@ async function fetchScene(id: string): Promise<SceneWithGraph | null> {
   const base = await resolveBaseUrl()
   const response = await fetch(`${base}/api/scenes/${encodeURIComponent(id)}`, {
     cache: 'no-store',
+    headers: process.env.PASCAL_SCENE_API_TOKEN
+      ? { Authorization: `Bearer ${process.env.PASCAL_SCENE_API_TOKEN}` }
+      : undefined,
   })
   if (response.status === 404) {
     return null

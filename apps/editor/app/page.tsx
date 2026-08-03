@@ -102,6 +102,12 @@ export default function Home() {
             <Link className="font-medium text-foreground hover:underline" href="/scenes">
               Create new
             </Link>
+            <span aria-hidden className="text-muted-foreground">
+              ·
+            </span>
+            <Link className="font-medium text-foreground hover:underline" href="/mcp-setup">
+              MCP setup
+            </Link>
           </div>
         </div>
       )}

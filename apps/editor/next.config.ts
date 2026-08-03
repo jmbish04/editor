@@ -1,3 +1,4 @@
+import path from 'node:path'
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
@@ -17,6 +18,7 @@ const nextConfig: NextConfig = {
     '@dgreenheck/ez-tree',
   ],
   turbopack: {
+    root: path.resolve(import.meta.dirname, '../..'),
     resolveAlias: {
       react: './node_modules/react',
       three: './node_modules/three',

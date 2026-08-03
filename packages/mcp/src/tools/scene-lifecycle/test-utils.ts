@@ -103,6 +103,7 @@ export class InMemorySceneStore implements SceneStore {
         url: existing.url ?? `/editor/${existing.id}`,
         published: true,
         graphHash: computeGraphHash(opts.graph),
+        rendering: opts.rendering ?? existing.rendering ?? null,
         graph: opts.graph,
       }
       this.data.set(existing.id, updated)
@@ -133,6 +134,7 @@ export class InMemorySceneStore implements SceneStore {
       url: `/editor/${id}`,
       published: true,
       graphHash: computeGraphHash(opts.graph),
+      rendering: opts.rendering ?? null,
       graph: opts.graph,
     }
     this.data.set(id, record)
@@ -226,6 +228,7 @@ export class InMemorySceneStore implements SceneStore {
       url: editorUrl,
       published: rec.published ?? true,
       graphHash: rec.graphHash ?? computeGraphHash(rec.graph),
+      rendering: rec.rendering ?? null,
     }
   }
 

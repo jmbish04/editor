@@ -22,6 +22,9 @@ async function fetchScenes(): Promise<SceneMeta[]> {
   const base = await resolveBaseUrl()
   const response = await fetch(`${base}/api/scenes?limit=50`, {
     cache: 'no-store',
+    headers: process.env.PASCAL_SCENE_API_TOKEN
+      ? { Authorization: `Bearer ${process.env.PASCAL_SCENE_API_TOKEN}` }
+      : undefined,
   })
   if (!response.ok) {
     return []
@@ -58,7 +61,15 @@ export default async function ScenesPage() {
             <span className="text-muted-foreground">/</span>
             <span className="font-medium text-foreground">Scenes</span>
           </nav>
-          <CreateSceneButton />
+          <div className="flex items-center gap-3">
+            <Link
+              className="text-muted-foreground text-sm hover:text-foreground hover:underline"
+              href="/mcp-setup"
+            >
+              MCP setup
+            </Link>
+            <CreateSceneButton />
+          </div>
         </div>
       </header>
 

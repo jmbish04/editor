@@ -5,6 +5,58 @@ import type { SceneGraph } from '@pascal-app/core/clone-scene-graph'
  */
 export type SceneId = string
 
+export interface SceneVariantMetadata {
+  /** Stable variant identifier assigned by Core Remodel. */
+  id: string
+  /** Human-readable label, such as "Open kitchen". */
+  label: string
+  /** Scene from which this variant was derived, when applicable. */
+  parentSceneId: SceneId | null
+}
+
+export interface SceneMeasurementEvidence {
+  /** Identifier of the authoritative measurement in Core Remodel. */
+  measurementId: string
+  kind: string
+  value: number
+  unit: string
+  confidence: number
+  /** Core Remodel revision from which this immutable rendering input was read. */
+  sourceRevision: string | null
+}
+
+export interface SceneProvenance {
+  source: 'core-remodel' | 'pascal' | 'import'
+  generatedAt: string
+  sourceRevision: string | null
+  requestId: string | null
+}
+
+export interface SceneGeometryEvidence {
+  /** How the initial or current geometry was produced. */
+  basis: 'measured-rectangle-bbox-placement' | 'pascal-refined' | 'imported'
+  /** The most granular coordinate evidence available from the source system. */
+  sourceDetail: 'room-percent-boxes-and-measured-sizes' | 'field-verified-coordinates' | 'unknown'
+  /** Elements that remain hypotheses rather than field-verified geometry. */
+  provisionalElements: string[]
+  /** Last measured-bounds validation timestamp, when available. */
+  validatedAt: string | null
+}
+
+/**
+ * Rendering-only integration metadata. Core Remodel remains authoritative for
+ * the project and measurement records referenced here.
+ */
+export interface SceneRenderingMetadata {
+  coreRemodelProjectId: string
+  variant: SceneVariantMetadata | null
+  measurements: SceneMeasurementEvidence[]
+  confidence: number | null
+  provenance: SceneProvenance
+  /** Geometry truthfulness and refinement state. Optional for older scenes. */
+  geometry?: SceneGeometryEvidence
+}
+
 export interface SceneMeta {
   id: SceneId
   name: string
@@ -31,6 +83,8 @@ export interface SceneMeta {
   saveMode?: SceneSaveMode
   /** Stable hash of the graph payload used for save/load/status matching. */
   graphHash?: string
+  /** Rendering lineage and immutable evidence references from Core Remodel. */
+  rendering?: SceneRenderingMetadata | null
 }
 
 export interface SceneWithGraph extends SceneMeta {
@@ -63,6 +117,8 @@ export interface SceneSaveOptions {
   agentSessionId?: string
   /** Optional high-level operation name for presence/debug metadata. */
   operation?: string
+  /** Rendering lineage and immutable evidence references from Core Remodel. */
+  rendering?: SceneRenderingMetadata | null
 }
 
 export type SceneSaveMode = 'draft' | 'checkpoint'
@@ -119,7 +175,7 @@ export interface ProjectStatus {
 }
 
 export interface SceneStore {
-  readonly backend: 'sqlite' | 'supabase'
+  readonly backend: 'sqlite' | 'supabase' | 'core-remodel'
   createProject?(opts: ProjectCreateOptions): Promise<ProjectStatus>
   getProjectStatus?(id: SceneId): Promise<ProjectStatus | null>
   save(opts: SceneSaveOptions): Promise<SceneMeta>

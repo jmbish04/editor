@@ -12,6 +12,12 @@ export * from './types'
  * path or `PASCAL_DATA_DIR` for a directory containing `pascal.db`.
  */
 export async function createSceneStore(env?: NodeJS.ProcessEnv): Promise<SceneStore> {
+  const runtimeEnv =
+    env ?? (typeof process !== 'undefined' ? process.env : ({} as NodeJS.ProcessEnv))
+  if (runtimeEnv.CORE_REMODEL_API_URL) {
+    const mod = await import('./core-remodel-scene-store')
+    return mod.createCoreRemodelSceneStore(runtimeEnv)
+  }
   const mod = await import('./sqlite-scene-store')
-  return new mod.SqliteSceneStore({ env })
+  return new mod.SqliteSceneStore({ env: runtimeEnv })
 }

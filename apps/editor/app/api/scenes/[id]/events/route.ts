@@ -20,7 +20,7 @@ export function OPTIONS(request: Request) {
 }
 
 export async function GET(request: Request, { params }: RouteParams) {
-  const guard = guardSceneApiRequest(request)
+  const guard = guardSceneApiRequest(request, { skipAuth: true })
   if (guard) return guard
 
   const { id } = await params

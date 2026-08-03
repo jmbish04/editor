@@ -5,6 +5,7 @@ import { registerPrompts } from './prompts'
 import { registerResources } from './resources'
 import type { SceneStore } from './storage/types'
 import { registerTools } from './tools'
+import type { CloudflareScreenshotToolOptions } from './tools/capture-scene-screenshot'
 import { registerVisionTools } from './tools/vision'
 
 export type CreatePascalMcpServerOptions = {
@@ -14,6 +15,8 @@ export type CreatePascalMcpServerOptions = {
   store?: SceneStore
   name?: string
   version?: string
+  /** Optional Cloudflare Browser Rendering/Images configuration for screenshot tools. */
+  cloudflare?: CloudflareScreenshotToolOptions
 }
 
 export function createPascalMcpServer(opts: CreatePascalMcpServerOptions): McpServer {
@@ -23,7 +26,7 @@ export function createPascalMcpServer(opts: CreatePascalMcpServerOptions): McpSe
   })
   const operations =
     opts.operations ?? createSceneOperations({ bridge: opts.bridge, store: opts.store })
-  registerTools(server, operations)
+  registerTools(server, operations, { cloudflare: opts.cloudflare })
   registerVisionTools(server, operations)
   registerResources(server, operations)
   registerPrompts(server, operations)

@@ -14,6 +14,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { updateSceneAction } from '@/app/actions/scene-actions'
 import { BuildTab } from './build-tab'
 import { CommunityViewerToolbarLeft, CommunityViewerToolbarRight } from './viewer-toolbar'
 
@@ -103,7 +104,7 @@ export function SceneLoader({ initialScene, meta }: SceneLoaderProps) {
   const handleLoad = useCallback(async () => initialScene, [initialScene])
 
   const handleSave = useCallback(
-    async (graph: SceneGraph, options?: { keepalive?: boolean }) => {
+    async (graph: SceneGraph) => {
       const graphJson = sceneGraphSignature(graph)
       const isRecentRemoteApply = Date.now() < suppressRemoteSaveUntilRef.current
       if (lastRemoteGraphJsonRef.current === graphJson) {
@@ -114,32 +115,24 @@ export function SceneLoader({ initialScene, meta }: SceneLoaderProps) {
       if (isRecentRemoteApply) return
 
       try {
-        const response = await fetch(`/api/scenes/${meta.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'If-Match': String(versionRef.current),
-          },
-          body: JSON.stringify({ name: meta.name, graph }),
-          // `keepalive` lets the request outlive a page unload (the autosave
-          // flush on refresh/close). Browsers cap keepalive bodies at 64KB, so
-          // only the unload flush opts in — normal debounced saves omit it and
-          // can carry arbitrarily large scenes.
-          keepalive: options?.keepalive,
+        const result = await updateSceneAction({
+          id: meta.id,
+          name: meta.name,
+          version: versionRef.current,
+          graph,
         })
 
-        if (response.status === 409) {
+        if (!result.ok && result.status === 409) {
           setConflict(true)
           return
         }
 
-        if (!response.ok) {
-          setSaveError(`Save failed (${response.status})`)
+        if (!result.ok) {
+          setSaveError(`Save failed (${result.status})`)
           return
         }
 
-        const next = (await response.json()) as SceneMeta
-        versionRef.current = next.version
+        versionRef.current = result.data.version
         setSaveError(null)
       } catch (error) {
         setSaveError(error instanceof Error ? error.message : 'Save failed')

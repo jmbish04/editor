@@ -1,6 +1,10 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { SceneOperations } from '../operations'
 import { registerApplyPatch } from './apply-patch'
+import {
+  type CloudflareScreenshotToolOptions,
+  registerCaptureSceneScreenshot,
+} from './capture-scene-screenshot'
 import { registerCheckCollisions } from './check-collisions'
 import { registerConstructionTools } from './construction-tools'
 import { registerCreateLevel } from './create-level'
@@ -15,8 +19,10 @@ import { registerFindNodes } from './find-nodes'
 import { registerGetNode } from './get-node'
 import { registerGetScene } from './get-scene'
 import { registerMeasure } from './measure'
+import { registerSeedMeasuredRooms } from './measured-rooms'
 import { registerPhotoToSceneTool } from './photo-to-scene'
 import { registerPlaceItem } from './place-item'
+import { registerProjectGeometryTools } from './project-geometry'
 import { registerRedo } from './redo'
 import { registerRoomTools } from './room-tools'
 import { registerSceneLifecycleTools } from './scene-lifecycle'
@@ -35,15 +41,21 @@ import { registerVariantTools } from './variants'
  * Scene-lifecycle tools (save/load/list/delete/rename scene) are registered
  * when persistence operations are available.
  */
-export function registerTools(server: McpServer, operations: SceneOperations): void {
+export function registerTools(
+  server: McpServer,
+  operations: SceneOperations,
+  options: { cloudflare?: CloudflareScreenshotToolOptions } = {},
+): void {
   registerGetScene(server, operations)
   registerGetNode(server, operations)
   registerDescribeNode(server, operations)
   registerFindNodes(server, operations)
   registerSceneQueryTools(server, operations)
   registerMeasure(server, operations)
+  registerProjectGeometryTools(server, operations)
   registerConstructionTools(server, operations)
   registerRoomTools(server, operations)
+  registerSeedMeasuredRooms(server, operations)
   registerApplyPatch(server, operations)
   registerCreateLevel(server, operations)
   registerCreateWall(server, operations)
@@ -58,6 +70,7 @@ export function registerTools(server: McpServer, operations: SceneOperations): v
   registerExportGlb(server, operations)
   registerValidateScene(server, operations)
   registerCheckCollisions(server, operations)
+  registerCaptureSceneScreenshot(server, operations, options.cloudflare)
   registerTemplateTools(server, operations)
   if (operations.hasStore) {
     registerSceneLifecycleTools(server, operations)

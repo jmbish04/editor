@@ -14,6 +14,8 @@
     "kill": "lsof -ti:3002 | xargs kill -9 2>/dev/null || echo 'No processes found on port 3002'",
     "clean:cache": "rm -rf apps/*/.next apps/*/.swc apps/*/.turbo packages/*/.turbo tooling/*/.turbo .turbo node_modules/.cache",
     "restart": "bun kill && bun clean:cache && bun dev",
+    "dev:tokens": "node scripts/with-cloudflare-tokens.mjs bun run dev",
+    "mcp:tokens": "node scripts/with-cloudflare-tokens.mjs bun run --cwd packages/mcp start",
     "release": "gh workflow run release.yml -f package=all -f bump=patch",
     "release:beta": "gh workflow run release.yml -f package=all -f bump=beta",
     "release:viewer": "gh workflow run release.yml -f package=viewer -f bump=patch",
