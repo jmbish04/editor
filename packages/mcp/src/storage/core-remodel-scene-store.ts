@@ -23,7 +23,7 @@ export interface CoreRemodelSceneStoreOptions {
   fetch?: typeof fetch
 }
 
-type ErrorPayload = { error?: string; message?: string }
+type ErrorPayload = { error?: string | { message?: string }; message?: string }
 
 function trimBaseUrl(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, '')
@@ -175,8 +175,12 @@ export class CoreRemodelSceneStore implements SceneStore {
     } catch {
       payload = {}
     }
+    const nestedMessage = typeof payload.error === 'object' ? payload.error.message : undefined
     const message =
-      payload.message ?? payload.error ?? `Core Remodel request failed (${response.status})`
+      payload.message ??
+      nestedMessage ??
+      (typeof payload.error === 'string' ? payload.error : undefined) ??
+      `Core Remodel request failed (${response.status})`
     if (response.status === 404) throw new SceneNotFoundError(message)
     if (response.status === 409 || response.status === 412) {
       throw new SceneVersionConflictError(message)

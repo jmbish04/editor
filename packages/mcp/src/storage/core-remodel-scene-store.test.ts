@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import type { SceneGraph } from '@pascal-app/core/clone-scene-graph'
 import { CoreRemodelSceneStore } from './core-remodel-scene-store'
 import { createSceneStore } from './index'
-import { SceneVersionConflictError } from './types'
+import { SceneInvalidError, SceneVersionConflictError } from './types'
 
 const graph: SceneGraph = {
   nodes: {
@@ -106,5 +106,20 @@ describe('CoreRemodelSceneStore', () => {
     await expect(store.rename('scene-a', 'New name', { expectedVersion: 2 })).rejects.toThrow(
       SceneVersionConflictError,
     )
+  })
+
+  test('preserves nested Core Remodel validation messages', async () => {
+    const store = new CoreRemodelSceneStore({
+      baseUrl: 'https://core-remodel.example',
+      fetch: async () =>
+        jsonResponse(
+          { success: false, error: { name: 'ZodError', message: 'projectId is required' } },
+          400,
+        ),
+    })
+
+    await expect(
+      store.save({ id: 'scene-a', name: 'Scene A', projectId: null, graph }),
+    ).rejects.toThrow(new SceneInvalidError('projectId is required'))
   })
 })

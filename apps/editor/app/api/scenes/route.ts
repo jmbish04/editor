@@ -76,10 +76,30 @@ export async function POST(request: NextRequest) {
 
   const operations = await getSceneOperations()
   try {
+    let sceneId = parsed.data.id
+    let projectId = parsed.data.projectId ?? null
+    if (!projectId && operations.storeBackend === 'core-remodel') {
+      return sceneApiJson(
+        request,
+        {
+          error: 'project_id_required',
+          message: 'Enter an existing Core Remodel project ID to create this scene.',
+        },
+        { status: 400 },
+      )
+    }
+    if (!projectId && operations.canCreateProject) {
+      const project = await operations.createProject({
+        ...(sceneId ? { id: sceneId } : {}),
+        name: parsed.data.name,
+      })
+      projectId = project.projectId
+      sceneId = project.id
+    }
     const meta = await operations.saveScene({
-      id: parsed.data.id,
+      id: sceneId,
       name: parsed.data.name,
-      projectId: parsed.data.projectId ?? null,
+      projectId,
       graph: parsed.data.graph as never,
       thumbnailUrl: parsed.data.thumbnailUrl ?? null,
       rendering: parsed.data.rendering ?? null,
@@ -105,7 +125,8 @@ function handleStoreError(request: NextRequest, error: unknown): NextResponse {
     return sceneApiJson(request, { error: 'too_large' }, { status: 413 })
   }
   if (code === 'invalid') {
-    return sceneApiJson(request, { error: 'invalid' }, { status: 400 })
+    const message = error instanceof Error ? error.message : undefined
+    return sceneApiJson(request, { error: 'invalid', message }, { status: 400 })
   }
   const message = error instanceof Error ? error.message : 'unexpected_error'
   return sceneApiJson(request, { error: 'internal_error', message }, { status: 500 })
