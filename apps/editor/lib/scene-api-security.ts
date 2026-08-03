@@ -63,6 +63,8 @@ function validateOrigin(request: Request): NextResponse | null {
 }
 
 function validateAuth(request: Request): NextResponse | null {
+  if (isTrustedSameOriginBrowserRequest(request)) return null
+
   const token = process.env.PASCAL_SCENE_API_TOKEN
   if (!token) {
     if (isLoopbackRequest(request)) return null
@@ -72,6 +74,11 @@ function validateAuth(request: Request): NextResponse | null {
   const supplied = bearerToken(request) ?? request.headers.get('x-pascal-scene-token')
   if (supplied && safeEqual(supplied, token)) return null
   return sceneApiJson(request, { error: 'unauthorized' }, { status: 401 })
+}
+
+function isTrustedSameOriginBrowserRequest(request: Request): boolean {
+  const origin = request.headers.get('origin')
+  return origin !== null && isSameOrigin(request, origin)
 }
 
 function validateRateLimit(request: Request): NextResponse | null {

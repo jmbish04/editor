@@ -9,6 +9,15 @@ const EMPTY_GRAPH: SceneGraph = {
   rootNodeIds: [],
 }
 
+async function sceneApiError(response: Response, fallback: string): Promise<string> {
+  try {
+    const payload = (await response.json()) as { error?: string; message?: string }
+    return payload.message ?? payload.error ?? `${fallback} (${response.status})`
+  } catch {
+    return `${fallback} (${response.status})`
+  }
+}
+
 interface SaveButtonProps {
   sceneId: string
   name: string
@@ -34,7 +43,7 @@ export function CreateSceneButton({ label = 'Create new scene' }: { label?: stri
         body: JSON.stringify({ name: 'Untitled scene', graph: EMPTY_GRAPH }),
       })
       if (!response.ok) {
-        setError(`Failed to create scene (${response.status})`)
+        setError(await sceneApiError(response, 'Failed to create scene'))
         return
       }
       const meta = (await response.json()) as { id: string }
@@ -93,7 +102,7 @@ export function SaveButton({ sceneId, name, version, getGraph }: SaveButtonProps
         return
       }
       if (!response.ok) {
-        setStatus(`Save failed (${response.status})`)
+        setStatus(await sceneApiError(response, 'Save failed'))
         return
       }
       setStatus('Saved')
@@ -121,7 +130,7 @@ export function SaveButton({ sceneId, name, version, getGraph }: SaveButtonProps
         body: JSON.stringify({ name: newName, graph }),
       })
       if (!response.ok) {
-        setStatus(`Save-as failed (${response.status})`)
+        setStatus(await sceneApiError(response, 'Save-as failed'))
         return
       }
       const meta = (await response.json()) as { id: string }

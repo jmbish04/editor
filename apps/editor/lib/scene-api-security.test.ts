@@ -47,6 +47,36 @@ test('accepts bearer token auth when configured', () => {
   expect(guardSceneApiRequest(request)).toBeNull()
 })
 
+test('allows same-origin browser requests when token auth is configured', () => {
+  process.env.PASCAL_SCENE_API_TOKEN = 'secret'
+  const request = new Request('https://editor.example/api/scenes', {
+    method: 'POST',
+    headers: {
+      host: 'editor.example',
+      origin: 'https://editor.example',
+    },
+  })
+
+  expect(guardSceneApiRequest(request)).toBeNull()
+})
+
+test('does not allow cross-origin browser requests without token auth', async () => {
+  process.env.PASCAL_SCENE_API_TOKEN = 'secret'
+  const request = new Request('https://editor.example/api/scenes', {
+    method: 'POST',
+    headers: {
+      host: 'editor.example',
+      origin: 'https://attacker.example',
+      'sec-fetch-site': 'cross-site',
+    },
+  })
+
+  const response = guardSceneApiRequest(request)
+
+  expect(response?.status).toBe(403)
+  expect(await response?.json()).toEqual({ error: 'origin_not_allowed' })
+})
+
 test('applies configured CORS origins for preflight', () => {
   process.env.PASCAL_SCENE_API_ORIGINS = 'https://app.example'
   const request = new Request('https://editor.example/api/scenes', {
