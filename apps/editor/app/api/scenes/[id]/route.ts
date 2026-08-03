@@ -214,6 +214,6 @@ async function handleStoreError(
   if (code === 'invalid') {
     return sceneApiJson(request, { error: 'invalid' }, { status: 400 })
   }
-  const message = error instanceof Error ? error.message : 'unexpected_error'
-  return sceneApiJson(request, { error: 'internal_error', message }, { status: 500 })
+  console.error('Scene API internal error', error)
+  return sceneApiJson(request, { error: 'internal_error' }, { status: 500 })
 }

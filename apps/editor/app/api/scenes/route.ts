@@ -1,7 +1,8 @@
-import type { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { apiGraphSchema } from '@/lib/graph-schema'
 import { sceneRenderingMetadataSchema } from '@/lib/rendering-metadata-schema'
+import { sceneStoreErrorResponse } from '@/lib/scene-api-errors'
 import { guardSceneApiRequest, sceneApiJson, sceneApiPreflight } from '@/lib/scene-api-security'
 import { getSceneOperations } from '@/lib/scene-store-server'
 
@@ -94,7 +95,6 @@ export async function POST(request: NextRequest) {
         name: parsed.data.name,
       })
       projectId = project.projectId
-      sceneId = project.id
     }
     const meta = await operations.saveScene({
       id: sceneId,
@@ -109,25 +109,6 @@ export async function POST(request: NextRequest) {
       headers: { Location: `/scene/${meta.id}` },
     })
   } catch (error) {
-    return handleStoreError(request, error)
+    return sceneStoreErrorResponse(request, error)
   }
-}
-
-function handleStoreError(request: NextRequest, error: unknown): NextResponse {
-  const code = (error as { code?: string })?.code
-  if (code === 'version_conflict') {
-    return sceneApiJson(request, { error: 'version_conflict' }, { status: 409 })
-  }
-  if (code === 'not_found') {
-    return sceneApiJson(request, { error: 'not_found' }, { status: 404 })
-  }
-  if (code === 'too_large') {
-    return sceneApiJson(request, { error: 'too_large' }, { status: 413 })
-  }
-  if (code === 'invalid') {
-    const message = error instanceof Error ? error.message : undefined
-    return sceneApiJson(request, { error: 'invalid', message }, { status: 400 })
-  }
-  const message = error instanceof Error ? error.message : 'unexpected_error'
-  return sceneApiJson(request, { error: 'internal_error', message }, { status: 500 })
 }

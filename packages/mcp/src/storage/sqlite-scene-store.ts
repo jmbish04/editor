@@ -29,6 +29,48 @@ const DEFAULT_MAX_SCENE_BYTES = 10 * 1024 * 1024
 const DEFAULT_LIST_LIMIT = 100
 const MAX_NAME_LENGTH = 200
 const MIN_NAME_LENGTH = 1
+const nullableTextSchema = z.string().min(1).max(500).nullable()
+const sceneRenderingMetadataSchema = z.object({
+  coreRemodelProjectId: z.string().min(1).max(200),
+  variant: z
+    .object({
+      id: z.string().min(1).max(200),
+      label: z.string().min(1).max(200),
+      parentSceneId: z.string().min(1).max(200).nullable(),
+    })
+    .nullable(),
+  measurements: z
+    .array(
+      z.object({
+        measurementId: z.string().min(1).max(200),
+        kind: z.string().min(1).max(100),
+        value: z.number().finite(),
+        unit: z.string().min(1).max(50),
+        confidence: z.number().min(0).max(1),
+        sourceRevision: nullableTextSchema,
+      }),
+    )
+    .max(10_000),
+  confidence: z.number().min(0).max(1).nullable(),
+  provenance: z.object({
+    source: z.enum(['core-remodel', 'pascal', 'import']),
+    generatedAt: z.iso.datetime(),
+    sourceRevision: nullableTextSchema,
+    requestId: nullableTextSchema,
+  }),
+  geometry: z
+    .object({
+      basis: z.enum(['measured-rectangle-bbox-placement', 'pascal-refined', 'imported']),
+      sourceDetail: z.enum([
+        'room-percent-boxes-and-measured-sizes',
+        'field-verified-coordinates',
+        'unknown',
+      ]),
+      provisionalElements: z.array(z.string().min(1).max(200)).max(1_000),
+      validatedAt: z.iso.datetime().nullable(),
+    })
+    .optional(),
+})
 
 export interface SqliteSceneStoreOptions {
   /** Exact SQLite database file path. If omitted, resolved from env. */
@@ -156,7 +198,7 @@ function parseRenderingMetadata(
 ): SceneRenderingMetadata | null {
   if (!raw) return null
   try {
-    return JSON.parse(raw) as SceneRenderingMetadata
+    return sceneRenderingMetadataSchema.parse(JSON.parse(raw)) as SceneRenderingMetadata
   } catch (error) {
     throw new SceneInvalidError(
       `Failed to parse rendering metadata for ${context}: ${error instanceof Error ? error.message : String(error)}`,

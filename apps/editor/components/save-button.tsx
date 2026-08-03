@@ -3,19 +3,15 @@
 import type { SceneGraph } from '@pascal-app/editor'
 import { useRouter } from 'next/navigation'
 import { type FormEvent, useCallback, useId, useState } from 'react'
+import { createSceneAction, updateSceneAction } from '@/app/actions/scene-actions'
 
 const EMPTY_GRAPH: SceneGraph = {
   nodes: {},
   rootNodeIds: [],
 }
 
-async function sceneApiError(response: Response, fallback: string): Promise<string> {
-  try {
-    const payload = (await response.json()) as { error?: string; message?: string }
-    return payload.message ?? payload.error ?? `${fallback} (${response.status})`
-  } catch {
-    return `${fallback} (${response.status})`
-  }
+function sceneActionError(status: number, error: string, fallback: string): string {
+  return `${error || fallback} (${status})`
 }
 
 interface SaveButtonProps {
@@ -48,21 +44,16 @@ export function CreateSceneButton({ label = 'Create new scene' }: { label?: stri
       setIsCreating(true)
       setError(null)
       try {
-        const response = await fetch('/api/scenes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: 'Untitled scene',
-            projectId: normalizedProjectId,
-            graph: EMPTY_GRAPH,
-          }),
+        const result = await createSceneAction({
+          name: 'Untitled scene',
+          projectId: normalizedProjectId,
+          graph: EMPTY_GRAPH,
         })
-        if (!response.ok) {
-          setError(await sceneApiError(response, 'Failed to create scene'))
+        if (!result.ok) {
+          setError(sceneActionError(result.status, result.error, 'Failed to create scene'))
           return
         }
-        const meta = (await response.json()) as { id: string }
-        router.push(`/scene/${meta.id}`)
+        router.push(`/scene/${result.data.id}`)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to create scene')
       } finally {
@@ -152,20 +143,18 @@ export function SaveButton({ sceneId, name, version, getGraph }: SaveButtonProps
     setIsSaving(true)
     setStatus(null)
     try {
-      const response = await fetch(`/api/scenes/${sceneId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'If-Match': String(version),
-        },
-        body: JSON.stringify({ name, graph }),
+      const result = await updateSceneAction({
+        id: sceneId,
+        name,
+        version,
+        graph,
       })
-      if (response.status === 409) {
+      if (!result.ok && result.status === 409) {
         setStatus('Conflict — reload to continue')
         return
       }
-      if (!response.ok) {
-        setStatus(await sceneApiError(response, 'Save failed'))
+      if (!result.ok) {
+        setStatus(sceneActionError(result.status, result.error, 'Save failed'))
         return
       }
       setStatus('Saved')
@@ -187,17 +176,15 @@ export function SaveButton({ sceneId, name, version, getGraph }: SaveButtonProps
     setIsSaving(true)
     setStatus(null)
     try {
-      const response = await fetch('/api/scenes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName, graph }),
+      const result = await createSceneAction({
+        name: newName,
+        graph,
       })
-      if (!response.ok) {
-        setStatus(await sceneApiError(response, 'Save-as failed'))
+      if (!result.ok) {
+        setStatus(sceneActionError(result.status, result.error, 'Save-as failed'))
         return
       }
-      const meta = (await response.json()) as { id: string }
-      router.push(`/scene/${meta.id}`)
+      router.push(`/scene/${result.data.id}`)
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Save-as failed')
     } finally {

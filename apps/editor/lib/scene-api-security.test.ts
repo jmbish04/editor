@@ -47,7 +47,7 @@ test('accepts bearer token auth when configured', () => {
   expect(guardSceneApiRequest(request)).toBeNull()
 })
 
-test('allows same-origin browser requests when token auth is configured', () => {
+test('requires token auth for same-origin browser requests when configured', async () => {
   process.env.PASCAL_SCENE_API_TOKEN = 'secret'
   const request = new Request('https://editor.example/api/scenes', {
     method: 'POST',
@@ -57,7 +57,10 @@ test('allows same-origin browser requests when token auth is configured', () => 
     },
   })
 
-  expect(guardSceneApiRequest(request)).toBeNull()
+  const response = guardSceneApiRequest(request)
+
+  expect(response?.status).toBe(401)
+  expect(await response?.json()).toEqual({ error: 'unauthorized' })
 })
 
 test('does not allow cross-origin browser requests without token auth', async () => {
